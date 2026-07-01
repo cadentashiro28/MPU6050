@@ -21,6 +21,7 @@
 
 /* Private includes ----------------------------------------------------------*/
 /* USER CODE BEGIN Includes */
+#include <stdio.h>
 #include "mpu6050.h"
 /* USER CODE END Includes */
 
@@ -94,6 +95,7 @@ int main(void)
   MX_USART2_UART_Init();
   /* USER CODE BEGIN 2 */
   MPU6050_Init(&hi2c1);
+  uint8_t buf = 0;
   /* USER CODE END 2 */
 
   /* Infinite loop */
@@ -103,7 +105,11 @@ int main(void)
     /* USER CODE END WHILE */
 
     /* USER CODE BEGIN 3 */
-
+	  buf = hi2c1.State;
+	  if (get_i2c_ready() && hi2c1.State == HAL_I2C_STATE_READY ) {
+		reset_i2c_ready();
+		MPU6050_ReadAll_IT(&hi2c1);
+	  }
   }
   /* USER CODE END 3 */
 }
@@ -253,7 +259,7 @@ static void MX_GPIO_Init(void)
   HAL_GPIO_Init(GPIOC, &GPIO_InitStruct);
 
   /* EXTI interrupt init*/
-  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 0, 0);
+  HAL_NVIC_SetPriority(EXTI9_5_IRQn, 6, 0);
   HAL_NVIC_EnableIRQ(EXTI9_5_IRQn);
 
   /* USER CODE BEGIN MX_GPIO_Init_2 */

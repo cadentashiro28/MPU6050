@@ -12,16 +12,28 @@ extern I2C_HandleTypeDef hi2c1;
 #define MPU6050_TIMEOUT 10
 #define WINDOW_SIZE 32
 
-static MPU6050_Data_t history[WINDOW_SIZE];
+static volatile uint8_t i2c_ready = 0;
+static volatile MPU6050_Data_t history[WINDOW_SIZE];
 static uint8_t write_idx = 0;
-static uint8_t raw_buf[14] = {0};
+static volatile uint8_t raw_buf[14] = {0};
 static MPU6050_Data_t latest;
+
+/**
+ * gets i2c_ready
+ */
+uint8_t get_i2c_ready() {
+	return i2c_ready;
+}
+
+void reset_i2c_ready() {
+	i2c_ready = 0;
+}
 
 /**
  * Parses raw buffer into data struct
  * Recall that idx 6 and 7 store temperature data
  */
-void MPU6050_Parse(uint8_t* buf, MPU6050_Data_t *out) {
+void MPU6050_Parse(volatile uint8_t* buf, volatile MPU6050_Data_t *out) {
 	out->accel_x = (uint16_t) (buf[0] << 8  | buf[1]);
 	out->accel_y = (uint16_t) (buf[2] << 8  | buf[3]);
 	out->accel_z = (uint16_t) (buf[4] << 8  | buf[5]); // SKIP TEMP DATA
@@ -49,8 +61,8 @@ void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
  * Triggers MPU6050 I2C read transaction
  */
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
-	if (GPIO_PIN == GPIO_PIN_8) {
-		MPU6050_ReadAll_IT(&hi2c1, raw_buf);
+	if (GPIO_Pin == GPIO_PIN_8) {
+		i2c_ready = 1;
 	}
 }
 
@@ -60,7 +72,6 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
  * Returns HAL_OK
  */
 HAL_StatusTypeDef MPU6050_Init(I2C_HandleTypeDef *hi2c) {
-	HAL_I2C_Init(hi2c);
 	uint8_t pwr = (1 << 0);
 	uint8_t cfg = (3 << 0);
 	uint8_t smplrt = (9 << 0); // 1000 / (1+9) = 100 Hz SMPRT
@@ -88,6 +99,6 @@ HAL_StatusTypeDef MPU6050_Init(I2C_HandleTypeDef *hi2c) {
  * hi2c - pointer to I2C handle
  * buf - pointer to raw readings buffer
  */
-void MPU6050_ReadAll_IT(I2C_HandleTypeDef *hi2c, uint8_t *buf) {
-	HAL_I2C_Mem_Read_IT(hi2c, MPU6050_ADDR, MPU6050_ACCEL_X_H, I2C_MEMADD_SIZE_8BIT, buf, 14);
+void MPU6050_ReadAll_IT(I2C_HandleTypeDef *hi2c) {
+	HAL_StatusTypeDef ret = HAL_I2C_Mem_Read_IT(hi2c, MPU6050_ADDR, MPU6050_ACCEL_X_H, I2C_MEMADD_SIZE_8BIT, raw_buf, 14);
 }

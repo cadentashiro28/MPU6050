@@ -47,9 +47,13 @@ typedef struct {
 
 // Function Declarations
 HAL_StatusTypeDef MPU6050_Init(I2C_HandleTypeDef *hi2c);
-void MPU6050_Parse(uint8_t* raw_buf, MPU6050_Data_t *latest);
+void MPU6050_Parse(volatile uint8_t* raw_buf, volatile MPU6050_Data_t *latest);
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c);
 void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin);
-void MPU6050_ReadAll_IT(I2C_HandleTypeDef *hi2c, uint8_t *buf);
+void MPU6050_ReadAll_IT(I2C_HandleTypeDef *hi2c);
+uint8_t get_i2c_ready();
+void reset_i2c_ready();
+
+
 
 #endif /* INC_MPU6050_H_ */
