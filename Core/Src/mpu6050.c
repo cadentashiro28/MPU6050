@@ -10,7 +10,10 @@
 extern I2C_HandleTypeDef hi2c1;
 
 #define MPU6050_TIMEOUT 10
+#define WINDOW_SIZE 32
 
+static MPU6050_Data_t history[WINDOW_SIZE];
+static uint8_t write_idx = 0;
 static uint8_t raw_buf[14] = {0};
 static MPU6050_Data_t latest;
 
@@ -31,12 +34,15 @@ void MPU6050_Parse(uint8_t* buf, MPU6050_Data_t *out) {
 /**
  * Activates upon I2C read transaction completion
  * Triggers parsing of raw data into a data structure
+ * Parses to current write index, then moves to nex
  */
 void HAL_I2C_MemRxCpltCallback(I2C_HandleTypeDef *hi2c) {
     if (hi2c->Instance == I2C1) {
-        MPU6050_Parse(raw_buf, &latest);
+        MPU6050_Parse(raw_buf, &history[write_idx]);
+        write_idx = (write_idx + 1) % WINDOW_SIZE;
     }
 }
+
 
 /**
  * Activates upon INT pin
@@ -47,6 +53,7 @@ void HAL_GPIO_EXTI_Callback(uint16_t GPIO_Pin) {
 		MPU6050_ReadAll_IT(&hi2c1, raw_buf);
 	}
 }
+
 
 /**
  * Initializes MPU6050 with preset configuration
@@ -71,6 +78,7 @@ HAL_StatusTypeDef MPU6050_Init(I2C_HandleTypeDef *hi2c) {
 	HAL_I2C_Mem_Write(hi2c, MPU6050_ADDR, MPU6050_INT_CFG, I2C_MEMADD_SIZE_8BIT, &int_cfg, 1, MPU6050_TIMEOUT);
 	return HAL_OK;
 }
+
 
 /**
  * Takes 14 readings starting from Accel_X_High up to Gyro_Z_Low
